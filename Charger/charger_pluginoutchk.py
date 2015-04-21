@@ -85,5 +85,7 @@ if __name__ == '__main__':
 	device.press(home_key)
 	if SimSourceInOut(device,vc) != -1:
 	    print("Auto test success")
+	    exit(0)
 	else:
 	    print("Auto test fail")
+	    exit(1)
