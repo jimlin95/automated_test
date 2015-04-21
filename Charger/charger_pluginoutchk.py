@@ -49,6 +49,8 @@ nonsus_vbus_cmd='adb shell "echo 0 > /sys/class/power_supply/smb347-usb/suspend_
 def SimSourceInOut(device,vc):
     global status
     device.startActivity(component=component_battery)
+    ViewClient.sleep(3)
+    vc.dump()
     no_id7 = vc.findViewByIdOrRaise("id/no_id/7")
     print('Simulation USB Plug-in...')
     temp_in = vc.findViewByIdOrRaise("android:id/title").getText().split('-')
