@@ -19,13 +19,8 @@ except:
 # This must be imported before MonkeyRunner and MonkeyDevice,
 # otherwise the import fails.
 from com.dtmilano.android.viewclient import ViewClient, View
-
+from common import  findid_and_touch, findtext_and_touch
 #from com.android.monkeyrunner import ViewClient, MonkeyDevice, MonkeyView
-def findandtouch(vc,string):
-	elem = 	vc.findViewWithText(string)
-	if elem:
-        	elem.touch()
-		vc.dump()
 
 def setTimezone(vc):        
         package = 'com.android.settings'
@@ -42,7 +37,7 @@ def setTimezone(vc):
         else:
             raise RuntimeError("Couldn't find Date & time") 
         vc.dump()
-        findandtouch(vc,u'Select time zone')
+        findtext_and_touch(vc,u'Select time zone')
         view = None
         android___id_list = vc.findViewByIdOrRaise("android:id/list")       
         android___id_list.uiScrollable.setViewClient(vc)

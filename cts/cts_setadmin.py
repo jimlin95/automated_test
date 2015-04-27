@@ -19,7 +19,7 @@ except:
 # This must be imported before MonkeyRunner and MonkeyDevice,
 # otherwise the import fails.
 from com.dtmilano.android.viewclient import ViewClient, View
-
+from common import  findid_and_touch, findtext_and_touch
 #from com.android.monkeyrunner import ViewClient, MonkeyDevice, MonkeyView
 def enable_device_admin_setting(vc, name):
     setting = vc.findViewWithTextOrRaise(name).getParent()
@@ -27,8 +27,7 @@ def enable_device_admin_setting(vc, name):
         print(name + " not enabled...enabling")
         setting.touch()
         vc.dump()
-        vc.findViewById("com.android.settings:id/action_button").touch()
-        vc.dump()
+        findid_and_touch(vc,"com.android.settings:id/action_button")
     else:
         print(name + " enabled")
 

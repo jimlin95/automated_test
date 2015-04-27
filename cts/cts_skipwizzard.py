@@ -19,46 +19,41 @@ except:
 # This must be imported before MonkeyRunner and MonkeyDevice,
 # otherwise the import fails.
 from com.dtmilano.android.viewclient import ViewClient, View
+from common import  findid_and_touch, findtext_and_touch
 
 def skip_setupwizzard(vc):
     # page 1
-    vc.findViewById('com.google.android.setupwizard:id/start').touch()
-    vc.dump()
-    vc.sleep(3)
+    ret = findid_and_touch(vc,'com.google.android.setupwizard:id/start')
+    if ret == 0:
+        return 0
     # page 2 (wifi)
-    button = vc.findViewById('com.android.settings:id/custom_button')
-    if button:
-        button.touch()
-    else:
-        button = vc.findViewById('com.android.settings:id/custom_button')
-        if button:
-            button.touch()
-        else:
-            print "error"
-    vc.dump()
-    vc.sleep(3)
+    ret = findid_and_touch(vc,'com.android.settings:id/custom_button')
+    if ret == 0:
+        return 0
+
     # page 2 sub page (wifi)
-    vc.findViewById('android:id/button2').touch()
-    vc.dump()
-    vc.sleep(3)
+    ret = findid_and_touch(vc,'android:id/button2')
+    if ret == 0:
+        return 0
     # page 3
-    vc.findViewById('com.google.android.setupwizard:id/next_button').touch()
-    vc.dump()
-    vc.sleep(3)
-    vc.findViewById('com.google.android.setupwizard:id/next_button').touch()
+    ret = findid_and_touch(vc,'com.google.android.setupwizard:id/next_button')
+    if ret == 0:
+        return 0
     # page 4
-    vc.dump()
-    vc.sleep(3)
+    ret = findid_and_touch(vc,'com.google.android.setupwizard:id/next_button')
+    if ret == 0:
+        return 0
     # page 5
-    vc.findViewById('com.google.android.setupwizard:id/next_button').touch()
-    vc.sleep(3)
-    vc.dump()
-    vc.sleep(3)
-    vc.findViewWithText('OK').touch()
-    vc.dump()
-    vc.sleep(3)
-    vc.findViewWithText('OK').touch()
-    vc.sleep(3)
+    ret = findid_and_touch(vc,'com.google.android.setupwizard:id/next_button')
+    if ret == 0:
+        return 0
+    ret = findtext_and_touch(vc,'OK')
+    if ret == 0:
+        return 0
+    ret = findtext_and_touch(vc,'OK')
+    if ret == 0:
+        return 0
+
 
 if __name__ == '__main__':
     os.system("adb devices")

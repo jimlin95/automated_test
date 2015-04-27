@@ -19,22 +19,20 @@ except:
 # This must be imported before MonkeyRunner and MonkeyDevice,
 # otherwise the import fails.
 from com.dtmilano.android.viewclient import ViewClient, View
-
-#from com.android.monkeyrunner import ViewClient, MonkeyDevice, MonkeyView
-def findandtouch(vc,string):
-	elem = 	vc.findViewWithText(string)
-	if elem:
-        	elem.touch()
-		vc.dump()
+from common import  findid_and_touch, findtext_and_touch
 def setSecurity(vc):
         package = 'com.android.settings'
         activity = '.SecuritySettings'
         component_name = package + '/' + activity
         vc.device.startActivity(component=component_name)
         vc.dump()
-        findandtouch(vc,u'Screen lock')
-        findandtouch(vc,u'None')
-
+        ret = findtext_and_touch(vc,u'Screen lock')
+        if ret == 0:
+            return 0
+        ret = findtext_and_touch(vc,u'None')
+        if ret == 0:
+            return 0
+        return 1
 
 if __name__ == '__main__':
     device, serialno = ViewClient.connectToDeviceOrExit()
