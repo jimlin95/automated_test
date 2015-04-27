@@ -18,7 +18,7 @@ limitations under the License.
 @author: Diego Torres Milano
 '''
 
-__version__ = '10.1.8'
+__version__ = '10.3.0'
 
 import sys
 import warnings
@@ -3580,7 +3580,7 @@ You should force ViewServer back-end.''')
 
         return self.device.isKeyboardShown()
 
-    def writeImageToFile(self, filename, _format="PNG"):
+    def writeImageToFile(self, filename, _format="PNG", deviceart=None, dropshadow=True, screenglare=True):
         '''
         Write the View image to the specified filename in the specified format.
 
@@ -3599,7 +3599,96 @@ You should force ViewServer back-end.''')
             filename = os.path.join(filename, self.serialno + '.' + _format.lower())
         if DEBUG:
             print >> sys.stderr, "writeImageToFile: saving image to '%s' in %s format (reconnect=%s)" % (filename, _format, self.device.reconnect)
-        self.device.takeSnapshot(reconnect=self.device.reconnect).save(filename, _format)
+        image = self.device.takeSnapshot(reconnect=self.device.reconnect)
+        if deviceart:
+            if 'STUDIO_DIR' in os.environ:
+                PLUGIN_DIR = 'plugins/android/lib/device-art-resources'
+                osName = platform.system()
+                if osName == 'Darwin':
+                    deviceArtDir = os.environ['STUDIO_DIR'] + '/Contents/' + PLUGIN_DIR
+                else:
+                    deviceArtDir = os.environ['STUDIO_DIR'] + '/' + PLUGIN_DIR
+                # FIXME: should parse XML
+                deviceArtXml = deviceArtDir + '/device-art.xml'
+                if not os.path.exists(deviceArtXml):
+                    warnings.warn("Cannot find device art definition file")
+                # <device id="nexus_5" name="Nexus 5">
+                #       <orientation name="port" size="1370,2405" screenPos="144,195" screenSize="1080,1920" shadow="port_shadow.png" back="port_back.png" lights="port_fore.png"/>
+                #       <orientation name="land" size="2497,1235" screenPos="261,65" screenSize="1920,1080" shadow="land_shadow.png" back="land_back.png" lights="land_fore.png"/>
+                # </device>
+                orientation = self.display['orientation']
+                if orientation == 0 or orientation == 2:
+                    orientationName = 'port'
+                elif orientation == 1 or orientation == 3:
+                    orientationName = 'land'
+                else:
+                    warnings.warn("Unknown orientation=" + orientation)
+                    orientationName = 'port'
+                separator = '_'
+                if deviceart == 'auto':
+                    hardware = self.device.getProperty('ro.hardware')
+                    if hardware == 'hammerhead':
+                        deviceart = 'nexus_5'
+                    elif hardware == 'mako':
+                        deviceart = 'nexus_4'
+                    elif hardware == 'grouper':
+                        deviceart = 'nexus_7' # 2012
+                    elif hardware == 'mt5861':
+                        deviceart = 'tv_1080p'
+
+                if deviceart == 'nexus_5':
+                    if orientationName == 'port':
+                        screenPos = (144, 195)
+                    else:
+                        screenPos = (261, 65)
+                elif deviceart == 'nexus_4':
+                    if orientationName == 'port':
+                        screenPos = (94, 187)
+                    else:
+                        screenPos = (257, 45)
+                elif deviceart == 'nexus_7': # 2012
+                    if orientationName == 'port':
+                        screenPos = (142, 190)
+                    else:
+                        screenPos = (260, 105)
+                elif deviceart == 'tv_1080p':
+                    screenPos = (85, 59)
+                    orientationName = ''
+                    separator = ''
+
+                SUPPORTED_DEVICES = ['nexus_5', 'nexus_4', 'nexus_7', 'tv_1080p']
+                if deviceart not in SUPPORTED_DEVICES:
+                    warnings.warn("Only %s is supported now, more devices coming soon" % SUPPORTED_DEVICES)
+                if not os.path.isdir(deviceArtDir + '/' + deviceart):
+                    warnings.warn("Cannot find device art for " + deviceart + ' at ' + deviceArtDir + '/' + deviceart)
+                deviceArtModelDir = deviceArtDir + '/' + deviceart
+                try:
+                    from PIL import Image
+                    if dropshadow:
+                        dropShadowImage = Image.open(deviceArtModelDir + '/%s%sshadow.png' % (orientationName, separator))
+                    deviceBack = Image.open(deviceArtModelDir + '/%s%sback.png' % (orientationName, separator))
+                    if dropshadow:
+                        dropShadowImage.paste(deviceBack, (0, 0), deviceBack)
+                        deviceBack = dropShadowImage
+                    deviceBack.paste(image, screenPos)
+                    if screenglare:
+                        screenGlareImage = Image.open(deviceArtModelDir + '/%s%sfore.png' % (orientationName, separator))
+                        deviceBack.paste(screenGlareImage, (0, 0), screenGlareImage)
+                    image = deviceBack
+                except ImportError as ex:
+                    warnings.warn('''PIL or Pillow is needed for image manipulation
+
+On Ubuntu install
+
+   $ sudo apt-get install python-imaging python-imaging-tk
+
+On OSX install
+
+   $ brew install homebrew/python/pillow
+''')
+            else:
+                warnings.warn("ViewClient.writeImageToFile: Cannot add device art because STUDIO_DIR environment variable was not set")
+        image.save(filename, _format)
 
     @staticmethod
     def writeViewImageToFileInDir(view):
@@ -3859,8 +3948,11 @@ class CulebraOptions:
     SERIALNO = 'serialno'
     MULTI_DEVICE = 'multi-device'
     LOG_ACTIONS = 'log-actions'
+    DEVICE_ART = 'device-art'
+    DROP_SHADOW = 'drop-shadow'
+    SCREEN_GLARE = 'glare'
 
-    SHORT_OPTS = 'HVvIEFSkw:i:t:d:rCUM:j:D:K:R:a:o:Apf:W:GuP:Os:mL'
+    SHORT_OPTS = 'HVvIEFSkw:i:t:d:rCUM:j:D:K:R:a:o:pf:W:GuP:Os:mLA:ZB'
     LONG_OPTS = [HELP, VERBOSE, VERSION, IGNORE_SECURE_DEVICE, IGNORE_VERSION_CHECK, FORCE_VIEW_SERVER_USE,
               DO_NOT_START_VIEW_SERVER,
               DO_NOT_IGNORE_UIAUTOMATOR_KILLED,
@@ -3869,7 +3961,7 @@ class CulebraOptions:
               USE_REGEXPS, VERBOSE_COMMENTS, UNIT_TEST_CLASS, UNIT_TEST_METHOD + '=',
               USE_JAR + '=', USE_DICTIONARY + '=', DICTIONARY_KEYS_FROM + '=', AUTO_REGEXPS + '=',
               START_ACTIVITY + '=',
-              OUTPUT + '=', INTERACTIVE, PREPEND_TO_SYS_PATH,
+              OUTPUT + '=', PREPEND_TO_SYS_PATH,
               SAVE_SCREENSHOT + '=', SAVE_VIEW_SCREENSHOTS + '=',
               GUI,
               DO_NOT_VERIFY_SCREEN_DUMP,
@@ -3878,6 +3970,7 @@ class CulebraOptions:
               SERIALNO + '=',
               MULTI_DEVICE,
               LOG_ACTIONS,
+              DEVICE_ART + '=', DROP_SHADOW, SCREEN_GLARE,
               ]
     LONG_OPTS_ARG = {WINDOW: 'WINDOW',
               FIND_VIEWS_BY_ID: 'BOOL', FIND_VIEWS_WITH_TEXT: 'BOOL', FIND_VIEWS_WITH_CONTENT_DESCRIPTION: 'BOOL',
@@ -3887,7 +3980,8 @@ class CulebraOptions:
               SAVE_SCREENSHOT: 'FILENAME', SAVE_VIEW_SCREENSHOTS: 'DIR',
               UNIT_TEST_METHOD: 'NAME',
               SCALE: 'FLOAT',
-              SERIALNO: 'LIST'}
+              SERIALNO: 'LIST',
+              DEVICE_ART: 'MODEL'}
     OPTS_HELP = {
             'H': 'prints this help',
             'V': 'verbose comments',
@@ -3906,7 +4000,6 @@ class CulebraOptions:
             'R': 'auto regexps (i.e. clock), implies -r. help list options',
             'a': 'starts Activity before dump',
             'o': 'output filename',
-            'A': 'interactive',
             'p': 'prepend environment variables values to sys.path',
             'f': 'save screenshot to file',
             'W': 'save View screenshots to files in directory',
@@ -3918,6 +4011,9 @@ class CulebraOptions:
             's': 'device serial number (can be more than 1)',
             'm': 'enables multi-device test generation',
             'L': 'log actions using logcat',
+            'A': 'device art model to frame screenshot (auto: autodetected)',
+            'Z': 'drop shadow for device art screenshot',
+            'B': 'screen glare over screenshot',
             }
 
 class CulebraTestCase(unittest.TestCase):
